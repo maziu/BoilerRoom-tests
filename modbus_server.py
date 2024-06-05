@@ -31,6 +31,9 @@ class HMIRead(IntEnum):
     REG_TS_RESERVED = 211
     REG_OpMode = 212
 
+class TestReg(IntEnum):
+    REG_TEST = 299
+
 class OPMODE(IntEnum):
     OPMODE_Off = 0
     OPMODE_Preheat = 1
@@ -156,14 +159,24 @@ class Modbus_ControllableServer():
         values = self.slave.get_values(self.BL_NAME, addr, 1)
         return values[0]
 
-    def setBitInRegister(self, addr, bitNumber):
+    def setBitInRegister(self, addr, bitNumber, value : bool = True):
+        v = self.slave.get_values(self.BL_NAME, addr, 1)[0]
+        if value:
+            v = v | (1<<bitNumber)
+        else:
+            v = v & ~(1<<bitNumber)
         pass
+        self.slave.set_values(self.BL_NAME, addr, v)
     
     def clrBitInRegister(self, addr, bitNumber):
-        pass
-
+        v = self.slave.get_values(self.BL_NAME, addr, 1)[0]
+        v = v & ~(1<<bitNumber)
+        self.slave.set_values(self.BL_NAME, addr, v)
+        
     def getBitInRegister(self, addr, bitNumber) -> bool:
-        pass
+        v = self.slave.get_values(self.BL_NAME, addr, 1)[0]
+        return (v & (1<<bitNumber)) != 0
+        
 
 #--- Application - related functions starts here
 
