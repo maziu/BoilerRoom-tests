@@ -137,7 +137,7 @@ class Modbus_ControllableServer():
         if serverType is not "Serial" and serverType is not "TCP":
             raise ValueError("Invalid serverType specified, only Serial and TCP supported")
         if serverType is "Serial":
-            self.server = modbus_rtu.RtuServer(serial = serial.Serial(port=port, baudrate=38400) 
+            self.server = modbus_rtu.RtuServer(serial = serial.Serial(port=port, baudrate=9600), interframe_multiplier = 20)
         if serverType is "TCP":
             self.server = modbus_tcp.TcpServer(port = port)
 

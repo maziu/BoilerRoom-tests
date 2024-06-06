@@ -16,7 +16,7 @@ class TestClass:
         cls.log.setLevel(logging.INFO)
         cls.xVar = 3
         cls.log.info("Setting up test env...")
-        cls.server = Modbus_ControllableServer(1001, "TCP")
+        cls.server = Modbus_ControllableServer("COM3", "Serial")
         cls.server.enableTestMode()
         cls.log.info("Done!")
 
@@ -60,8 +60,20 @@ class TestClass:
         r = float(random.randint(0, 500))/10
         self.server.setTemperature(t.TempSensor.TS_3D, r)
         self.server.waitForUpdate()
+        self.server.waitForUpdate()
+        self.server.waitForUpdate()
+        self.server.waitForUpdate()
+        self.server.waitForUpdate()
+
+        self.server.waitForUpdate()
         assert (self.server.getTemperature(t.TempSensor.TS_3D)) == r,  \
                 f"Basic get / set temperature test failed, no PLC connection or invalid PLC program"
+        self.server.waitForUpdate()
+        self.server.waitForUpdate()
+        self.server.waitForUpdate()
+        self.server.waitForUpdate()
+
+
 
 
 
