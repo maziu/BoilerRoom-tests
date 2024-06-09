@@ -73,13 +73,20 @@ def test_smoke(server):
     server.waitForUpdate()
     assert (server.getTemperature(t.TempSensor.TS_3D)) == r,  \
             f"Basic get / set temperature test failed, no PLC connection or invalid PLC program"
+    server.setRegister(t.HMIWrite.REG_SIM_INPUTS, 0)
     server.waitForUpdate()
+    assert (server.getInput(t.Devices_IN.DEVI_BtnCirc) == 0)
+    assert (server.getInput(t.Devices_IN.DEVI_BtnLighter) == 0)
+    assert (server.getInput(t.Devices_IN.DEVI_PFireplace) == 0)
+    assert (server.getInput(t.Devices_IN.DEVI_SigThermostat) == 0)
+    server.setInput(t.Devices_IN.DEVI_BtnLighter)
     server.waitForUpdate()
+    assert (server.getInput(t.Devices_IN.DEVI_BtnLighter) == 1)
+    server.clrInput(t.Devices_IN.DEVI_BtnLighter)
     server.waitForUpdate()
-    server.waitForUpdate()
+    assert (server.getInput(t.Devices_IN.DEVI_BtnLighter) == 0)
 
-
-def test_ctrlmode(self):
+def test_ctrlmode(server):
     log.info("Test: Control mode and manual command from HMI")
     server.setRegister(t.HMIWrite.REG_MODE, 0xFFFF) #Control all from HMI 
     server.setRegister(t.HMIWrite.REG_CMD, 0x0000)
