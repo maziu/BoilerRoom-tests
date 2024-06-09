@@ -48,6 +48,7 @@ class HMIWrite(IntEnum):
     REG_ParamsTimestamp = 104
     REG_PARAMS = 105
     REG_SIM_TEMP = 144
+    REG_SIM_INPUTS = 150
 
 class TestMode(IntEnum):
     REG_TestMode_Off = 0
@@ -66,6 +67,7 @@ class Flags(IntEnum):
     FLAG_StartBoiler = 1
     FLAG_SimTemp = 2
     FLAG_FanKeepalive = 3
+    FLAG_SimInputs = 4
 
 class Devices_OUT(IntEnum):
     DEVO_PCirc = 0
@@ -184,12 +186,14 @@ class Modbus_ControllableServer():
         with self.dataLock:
             self.setRegister(HMIWrite.REG_TestMode, TestMode.REG_TestMode_1)
             self.setBitInRegister(int(HMIWrite.REG_FLAGS), Flags.FLAG_SimTemp)
-            sleep(2) # Wait to be sure that value is updated in PLC
+            self.setBitInRegister(int(HMIWrite.REG_FLAGS), Flags.FLAG_SimInputs)
+        sleep(2) # Wait to be sure that value is updated in PLC
 
     def disableTestMode(self):
         with self.dataLock:
             self.setRegister(HMIWrite.REG_TestMode, TestMode.REG_TestMode_Off)
             self.clrBitInRegister(HMIWrite.REG_FLAGS, Flags.FLAG_SimTemp)
+            self.clrBitInRegister(HMIWrite.REG_FLAGS, Flags.FLAG_SimInputs)
         sleep(2) # Wait to be sure that value is updated in PLC
 
     def stop_server(self):
@@ -213,8 +217,16 @@ class Modbus_ControllableServer():
         t = Temp(self.getRegister(HMIRead.REG_Temperatures + sensor))
         return float(t)
 
-    def setInput(self, input : Input):
-        pass
+    def setInput(self, input : Devices_IN):
+        with self.dataLock:
+            self.setBitInRegister(HMIWrite.REG_SIM_INPUTS, input)
+    
+    def clrInput(self, input: Devices_IN):
+        with self.dataLock:
+            self.clrBitInRegister(HMIWrite.REG_SIM_INPUTS, input)
+
+    def getInput(self, input: Devices_IN) -> bool:
+        return self.getBitInRegister(HMIRead.REG_IO_Inputs, input)
 
     def setParameter(self, param : Param, value : float):
         pass

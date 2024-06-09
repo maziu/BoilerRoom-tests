@@ -63,7 +63,19 @@ class TestClass:
         self.server.waitForUpdate()
         assert (self.server.getTemperature(t.TempSensor.TS_3D)) == r,  \
                 f"Basic get / set temperature test failed, no PLC connection or invalid PLC program"
+        self.server.setRegister(t.HMIWrite.REG_SIM_INPUTS, 0)
         self.server.waitForUpdate()
+        assert (self.server.getInput(t.Devices_IN.DEVI_BtnCirc) == 0)
+        assert (self.server.getInput(t.Devices_IN.DEVI_BtnLighter) == 0)
+        assert (self.server.getInput(t.Devices_IN.DEVI_PFireplace) == 0)
+        assert (self.server.getInput(t.Devices_IN.DEVI_SigThermostat) == 0)
+        self.server.setInput(t.Devices_IN.DEVI_BtnLighter)
+        self.server.waitForUpdate()
+        assert (self.server.getInput(t.Devices_IN.DEVI_BtnLighter) == 1)
+        self.server.clrInput(t.Devices_IN.DEVI_BtnLighter)
+        self.server.waitForUpdate()
+        assert (self.server.getInput(t.Devices_IN.DEVI_BtnLighter) == 0)
+        
 
 
     def test_ctrlmode(self):
@@ -89,7 +101,6 @@ class TestClass:
         assert self.server.getRegister(t.HMIRead.REG_DeviceStatus) == 0x0000
         self.server.setRegister(t.HMIWrite.REG_MODE, 0) #Disable HMI control
         
-
 
 if __name__ == "__main__":
     print("Do not execute main please")
