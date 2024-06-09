@@ -137,7 +137,7 @@ class Modbus_ControllableServer():
         if serverType is not "Serial" and serverType is not "TCP":
             raise ValueError("Invalid serverType specified, only Serial and TCP supported")
         if serverType is "Serial":
-            self.server = modbus_rtu.RtuServer(serial = serial.Serial(port=port, baudrate=9600), interframe_multiplier = 20)
+            self.server = modbus_rtu.RtuServer(serial = serial.Serial(port=port, baudrate=9600), interframe_multiplier = 40, interchar_multiplier = 3)
         if serverType is "TCP":
             self.server = modbus_tcp.TcpServer(port = port)
 
@@ -196,7 +196,7 @@ class Modbus_ControllableServer():
         self.server.stop()
 
     def waitForUpdate(self):
-        sleep(1.5)
+        sleep(1.6)
 
     def setTemperature(self, sensor : TempSensor, value : float):
         if type(value) != type(12.3):

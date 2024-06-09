@@ -44,6 +44,7 @@ class TestClass:
         assert 0xAAA8 == self.server.getRegister(t.TestReg.REG_TEST) # 2nd bit cleared
         assert False == self.server.getBitInRegister(t.TestReg.REG_TEST, 2)
         assert True == self.server.getBitInRegister(t.TestReg.REG_TEST, 3)
+        self.server.setRegister(t.TestReg.REG_TEST, 0)
         self.log.info("Self-test: Temperature types")
         t1 = Temp(123)
         assert (float(t1)) == 12.3
@@ -60,21 +61,34 @@ class TestClass:
         r = float(random.randint(0, 500))/10
         self.server.setTemperature(t.TempSensor.TS_3D, r)
         self.server.waitForUpdate()
-        self.server.waitForUpdate()
-        self.server.waitForUpdate()
-        self.server.waitForUpdate()
-        self.server.waitForUpdate()
-
-        self.server.waitForUpdate()
         assert (self.server.getTemperature(t.TempSensor.TS_3D)) == r,  \
                 f"Basic get / set temperature test failed, no PLC connection or invalid PLC program"
         self.server.waitForUpdate()
-        self.server.waitForUpdate()
-        self.server.waitForUpdate()
-        self.server.waitForUpdate()
 
 
-
+    def test_ctrlmode(self):
+        self.log.info("Test: Control mode and manual command from HMI")
+        self.server.setRegister(t.HMIWrite.REG_MODE, 0xFFFF) #Control all from HMI 
+        self.server.setRegister(t.HMIWrite.REG_CMD, 0x0000)
+        self.log.info("Set all outputs OFF")
+        self.server.waitForUpdate()
+        self.log.info("Check results")
+        assert self.server.getRegister(t.HMIRead.REG_DeviceStatus) == 0x0000
+        self.server.waitForUpdate()
+        self.server.setBitInRegister(t.HMIWrite.REG_MODE, t.Devices_OUT.DEVO_Belimo1)
+        self.server.setBitInRegister(t.HMIWrite.REG_CMD, t.Devices_OUT.DEVO_Belimo1)
+        self.log.info("Set belimo to ON")
+        self.server.waitForUpdate()
+        self.log.info("Get results")
+        assert self.server.getBitInRegister(t.HMIRead.REG_DeviceStatus, t.Devices_OUT.DEVO_Belimo1) == 1
+        self.log.info("Get disable all outputs")
+        self.server.setRegister(t.HMIWrite.REG_MODE, 0xFFFF) #Control all from HMI 
+        self.server.setRegister(t.HMIWrite.REG_CMD, 0x0000)
+        self.server.waitForUpdate()
+        self.log.info("Check results")
+        assert self.server.getRegister(t.HMIRead.REG_DeviceStatus) == 0x0000
+        self.server.setRegister(t.HMIWrite.REG_MODE, 0) #Disable HMI control
+        
 
 
 if __name__ == "__main__":
