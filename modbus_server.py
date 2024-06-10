@@ -38,8 +38,8 @@ class TestReg(IntEnum):
 class OPMODE(IntEnum):
     OPMODE_Off = 0
     OPMODE_Preheat = 1
-    OPMODE_Work = 2
-    OPMODE_Final = 3
+    OPMODE_FanOff = 2
+    OPMODE_FanOn = 3
 
 class HMIWrite(IntEnum):
     REG_MODE = 100
