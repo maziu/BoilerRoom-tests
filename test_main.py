@@ -1,41 +1,12 @@
 
-from modbus_server import Modbus_ControllableServer, Temp
 import modbus_server as t
 
 import pytest
 import logging
 import random
-import traceback
+from time import time, sleep
 
 log = logging.getLogger(__name__)
-
-class ModbusServer():
-    def __init__(self):
-        log.setLevel(logging.INFO)
-        log.info("Setting up server...")
-        self._server = Modbus_ControllableServer("COM3", "Serial")
-        self._server.enableTestMode()
-        log.info("Done!")
-
-    def __enter__(self):
-        return self._server
-
-    def __exit__(self, exc_type, exc_value, tb):
-        if exc_type is not None:
-            traceback.print_exception(exc_type, exc_value, tb)
-            # return False # uncomment to pass exception through
-
-        log.info("Closing server...")
-        self._server.disableTestMode()
-        self._server.stop_server()
-        log.info("Done!")
-
-
-@pytest.fixture()
-def server():
-    with ModbusServer() as s:
-        yield s
-
 
 @pytest.mark.order(0)
 def test_self(server):
@@ -56,10 +27,10 @@ def test_self(server):
     assert True == server.getBitInRegister(t.TestReg.REG_TEST, 3)
     server.setRegister(t.TestReg.REG_TEST, 0)
     log.info("Self-test: Temperature types")
-    t1 = Temp(123)
+    t1 = t.Temp(123)
     assert (float(t1)) == 12.3
     assert (int(t1)) == 123
-    t2 = Temp(15.4)
+    t2 = t.Temp(15.4)
     assert (float(t2)) == 15.4
     assert (int(t2)) == 154
     assert (1+1) == 2
@@ -108,3 +79,37 @@ def test_ctrlmode(server):
     log.info("Check results")
     assert server.getRegister(t.HMIRead.REG_DeviceStatus) == 0x0000
     server.setRegister(t.HMIWrite.REG_MODE, 0) #Disable HMI control
+
+
+@pytest.mark.timeout(25)
+@pytest.mark.parametrize("source", {"button", "hmi"})
+@pytest.mark.parametrize("ign_time", {5, 15})
+def test_ignition_time(server, source, ign_time):
+    print(f"Test: ignition time set to {ign_time} triggered by {source}")
+    server.setParameter(t.Param.P_IGNITION_TIME_105, ign_time)
+    server.saveParams()
+
+    if source == "button":
+        server.setInput(t.Devices_IN.DEVI_BtnLighter)
+    else:
+        server.setFlag(t.Flags.FLAG_StartBoiler)
+
+    while not server.getOutput(t.Devices_OUT.DEVO_Lighter):
+        sleep(0.5)
+
+    if source == "button":
+        server.clrInput(t.Devices_IN.DEVI_BtnLighter)
+    else:
+        server.clrFlag(t.Flags.FLAG_StartBoiler)
+
+    lighter_start_time_s = time()
+    
+    while server.getOutput(t.Devices_OUT.DEVO_Lighter):
+        sleep(0.5)
+
+    assert time() - lighter_start_time_s == pytest.approx(ign_time, abs=1)
+
+
+# @pytest.mark.timeout(5)
+# def test_asd():
+#     sleep(10)

@@ -11,9 +11,10 @@ import serial
 from threading import Thread, Lock, Event
 from  time import sleep
 
-class Input(IntEnum):
-    EXAMPLE_INPUT = 1
-    EXAMPLE_IN2 = 2
+import logging
+import traceback
+
+log = logging.getLogger(__name__)
 
 class HMIRead(IntEnum):
     REG_DeviceStatus = 200
@@ -68,6 +69,7 @@ class Flags(IntEnum):
     FLAG_SimTemp = 2
     FLAG_FanKeepalive = 3
     FLAG_SimInputs = 4
+    FLAG_PLCReset = 5
 
 class Devices_OUT(IntEnum):
     DEVO_PCirc = 0
@@ -87,20 +89,43 @@ class Devices_OUT(IntEnum):
 
 class Devices_IN(IntEnum):
     DEVI_PFireplace = 0
-    DEVI_BtnCirc = 1
-    DEVI_BtnLighter = 2
-    DEVI_SigThermostat = 3
-
+    DEVI_BtnCirc = 3
+    DEVI_BtnLighter = 6
+    DEVI_SigThermostat = 7
 
 class Param(IntEnum):
-    P_IGN_TIME_105 = 0
+    P_IGNITION_TIME_105 = 0
     P_FAN_TIME_MIN_106 = 1
     P_FAN_TEMP_MAX_107 = 2
     P_FAN_TEMP_MIN_108 = 3
     P_FAN_TIME_KEEP_109 = 4
-    #5 110 reserved
+    # RESERVED_110 = 5
     P_PUMP_TEMP_ON_111 = 6
     P_PUMP_TEMP_OFF_112 = 7
+    P_INTEGR_TIME_MOVE_113 = 8
+    P_CWU_TEMP_ON_114 = 9
+    P_CWU_TEMP_OFF_115 = 10
+    P_CWU_INTEGR_TEMP_DIFF_ON_116 = 11
+    P_CWU_INTEGR_TEMP_DIFF_OFF_117 = 12
+    P_PUMP_HEATER_TEMP_DIFF_BOILER_MIN_118 = 13
+    P_PUMP_HEATER_TEMP_DIFF_BOILER_MAX_119 = 14
+    P_PUMP_MODE_HEATER_INTEGR_TEMP_DIFF_ON_120 = 15
+    P_PUMP_MODE_HEATER_INTEGR_TEMP_DIFF_OF_121 = 16
+    P_PUMP_MODE_FIRE_INTEGR_TEMP_DIFF_ON_122 = 17
+    P_PUMP_MODE_FIRE_INTEGR_TEMP_DIFF_OFF_123 = 18
+    P_PUMP_MODE_BUFF_INTEGR_TEMP_DIFF_ON_124 = 19
+    P_PUMP_MODE_BUFF_INTEGR_TEMP_DIFF_OFF_125 = 20
+    P_3D_VALVE_TIME_WAIT_126 = 21
+    P_3D_VALVE_TEMP_DIFF_ACTIVATION_127 = 22
+    P_3D_VALVE_KP_128 = 23
+    P_3D_TEMP_OUTSIDE_MINUS10_129 = 23
+    P_3D_TEMP_OUTSIDE_MINUS5_130 = 24
+    P_3D_TEMP_OUTSIDE0_131 = 25
+    P_3D_TEMP_OUTSIDE10_132 = 26
+    P_3D_TEMP_OUTSIDE_OVER10_133 = 27
+    P_BELIMO1_TIME_SWITCHOVER_134 = 28
+    P_BELIMO2_LOW_TEMPERATURE_135 = 29
+    P_BELIMO2_HIGH_TEMPERATURE_136 = 30
 
 class Temp:
     def __init__(self, i):
@@ -196,6 +221,12 @@ class Modbus_ControllableServer():
             self.clrBitInRegister(HMIWrite.REG_FLAGS, Flags.FLAG_SimInputs)
         sleep(2) # Wait to be sure that value is updated in PLC
 
+    def setPLCReset(self):
+        with self.dataLock:
+            self.setBitInRegister(HMIWrite.REG_FLAGS, Flags.FLAG_PLCReset)
+        self.waitForUpdate()
+        self.clrBitInRegister(HMIWrite.REG_FLAGS, Flags.FLAG_PLCReset)
+
     def stop_server(self):
         self.server.stop()
 
@@ -228,11 +259,27 @@ class Modbus_ControllableServer():
     def getInput(self, input: Devices_IN) -> bool:
         return self.getBitInRegister(HMIRead.REG_IO_Inputs, input)
 
+    def getOutput(self, output: Devices_OUT) -> bool:
+        return self.getBitInRegister(HMIRead.REG_DeviceStatus, int(output))
+
+    def setFlag(self, flag: Flags):
+        with self.dataLock:
+            self.setBitInRegister(HMIWrite.REG_FLAGS, flag)
+
+    def clrFlag(self, flag: Flags):
+        with self.dataLock:
+            self.clrBitInRegister(HMIWrite.REG_FLAGS, flag)
+
     def setParameter(self, param : Param, value : float):
-        pass
+        with self.dataLock:
+            self.setRegister(HMIWrite.REG_PARAMS + param, int(value))
+        self.waitForUpdate()
 
     def saveParams(self): #Set value, clear after 2-3s
-        pass
+        with self.dataLock:
+            self.setBitInRegister(HMIWrite.REG_FLAGS, Flags.FLAG_SaveParams)
+        self.waitForUpdate()
+        self.clrBitInRegister(HMIWrite.REG_FLAGS, Flags.FLAG_SaveParams)
 
     #def getOutput(self, output : Output) -> bool:
     #    pass
@@ -298,3 +345,25 @@ class Modbus_ControllableServer():
                     sys.stdout.write("unknown command %s\r\n" % args[0])
         finally:
             server.stop()
+
+
+class ModbusServer():
+    def __init__(self):
+        log.setLevel(logging.INFO)
+        log.info("Setting up server...")
+        self._server = Modbus_ControllableServer("COM5", "Serial")
+        self._server.enableTestMode()
+        log.info("Done!")
+
+    def __enter__(self):
+        return self._server
+
+    def __exit__(self, exc_type, exc_value, tb):
+        if exc_type is not None:
+            traceback.print_exception(exc_type, exc_value, tb)
+            # return False # uncomment to pass exception through
+
+        log.info("Closing server...")
+        self._server.disableTestMode()
+        self._server.stop_server()
+        log.info("Done!")
