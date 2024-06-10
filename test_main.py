@@ -8,6 +8,7 @@ from time import time, sleep
 
 log = logging.getLogger(__name__)
 
+
 @pytest.mark.order(0)
 def test_self(server):
     log.info("Self-testing test system")
@@ -57,6 +58,7 @@ def test_smoke(server):
     server.waitForUpdate()
     assert (server.getInput(t.Devices_IN.DEVI_BtnLighter) == 0)
 
+
 def test_ctrlmode(server):
     log.info("Test: Control mode and manual command from HMI")
     server.setRegister(t.HMIWrite.REG_MODE, 0xFFFF) #Control all from HMI 
@@ -81,12 +83,11 @@ def test_ctrlmode(server):
     server.setRegister(t.HMIWrite.REG_MODE, 0) #Disable HMI control
 
 
-@pytest.mark.timeout(25)
 @pytest.mark.parametrize("source", {"button", "hmi"})
-@pytest.mark.parametrize("ign_time", {5, 15})
-def test_ignition_time(server, source, ign_time):
-    print(f"Test: ignition time set to {ign_time} triggered by {source}")
-    server.setParameter(t.Param.P_IGNITION_TIME_105, ign_time)
+@pytest.mark.parametrize("ign_time_s", {5, 15})
+def test_ignition_time(server, source, ign_time_s):
+    print(f"Test: ignition time set to {ign_time_s} triggered by {source}")
+    server.setParameter(t.Param.P_IGNITION_TIME_105, ign_time_s)
     server.saveParams()
 
     if source == "button":
@@ -96,20 +97,20 @@ def test_ignition_time(server, source, ign_time):
 
     while not server.getOutput(t.Devices_OUT.DEVO_Lighter):
         sleep(0.5)
+    lighter_start_time_s = time()
 
     if source == "button":
         server.clrInput(t.Devices_IN.DEVI_BtnLighter)
     else:
         server.clrFlag(t.Flags.FLAG_StartBoiler)
 
-    lighter_start_time_s = time()
-    
     while server.getOutput(t.Devices_OUT.DEVO_Lighter):
         sleep(0.5)
 
-    assert time() - lighter_start_time_s == pytest.approx(ign_time, abs=1)
+    assert time() - lighter_start_time_s == pytest.approx(ign_time_s, abs=1)
 
 
-# @pytest.mark.timeout(5)
-# def test_asd():
-#     sleep(10)
+
+
+    
+

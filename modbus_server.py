@@ -8,7 +8,7 @@ from modbus_tk import modbus_tcp
 from modbus_tk import modbus_rtu
 import serial
 
-from threading import Thread, Lock, Event
+from threading import Lock
 from  time import sleep
 
 import logging
@@ -262,6 +262,9 @@ class Modbus_ControllableServer():
     def getOutput(self, output: Devices_OUT) -> bool:
         return self.getBitInRegister(HMIRead.REG_DeviceStatus, int(output))
 
+    def getOpmode(self) -> OPMODE:
+        return self.getRegister(HMIRead.REG_OpMode)
+
     def setFlag(self, flag: Flags):
         with self.dataLock:
             self.setBitInRegister(HMIWrite.REG_FLAGS, flag)
@@ -273,7 +276,6 @@ class Modbus_ControllableServer():
     def setParameter(self, param : Param, value : float):
         with self.dataLock:
             self.setRegister(HMIWrite.REG_PARAMS + param, int(value))
-        self.waitForUpdate()
 
     def saveParams(self): #Set value, clear after 2-3s
         with self.dataLock:
