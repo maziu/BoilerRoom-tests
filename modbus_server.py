@@ -353,7 +353,7 @@ class ModbusServer():
     def __init__(self):
         log.setLevel(logging.INFO)
         log.info("Setting up server...")
-        self._server = Modbus_ControllableServer("COM5", "Serial")
+        self._server = Modbus_ControllableServer("COM4", "Serial")
         self._server.enableTestMode()
         log.info("Done!")
 
